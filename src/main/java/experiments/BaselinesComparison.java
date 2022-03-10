@@ -1,21 +1,23 @@
-package main.java.experiments;
+package experiments;
 
-import cf4j.Kernel;
-import cf4j.Processor;
-import cf4j.model.matrixFactorization.Bmf;
-import cf4j.model.matrixFactorization.FactorizationModel;
-import cf4j.model.matrixFactorization.Pmf;
-import cf4j.model.predictions.FactorizationPrediction;
-import cf4j.utils.Range;
-import main.java.mf.Emf;
-import main.java.mf.Nmf;
-import main.java.qualityMeasures.QualityMeasures;
+import es.upm.etsisi.cf4j.data.BenchmarkDataModels;
+import es.upm.etsisi.cf4j.data.DataModel;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
+import es.upm.etsisi.cf4j.qualityMeasure.prediction.MSE;
+import es.upm.etsisi.cf4j.recommender.Recommender;
+import es.upm.etsisi.cf4j.recommender.matrixFactorization.BNMF;
+import es.upm.etsisi.cf4j.recommender.matrixFactorization.BiasedMF;
+import es.upm.etsisi.cf4j.recommender.matrixFactorization.NMF;
+import es.upm.etsisi.cf4j.recommender.matrixFactorization.PMF;
+import mf.EMF;
+
+import java.io.IOException;
 
 public class BaselinesComparison {
 
     private static int NUM_ITERS = 100;
 
-    private static final String BINARY_FILE = "datasets/ml100k.cf4j";
+    //private static final String BINARY_FILE = "datasets/ml100k.cf4j";
 
     private static int PMF_NUM_TOPICS = 6;
     private static double PMF_LAMBDA = 0.085;
@@ -35,7 +37,9 @@ public class BaselinesComparison {
     private static double EMF_LEARNING_RATE = 0.001;
     private static double EMF_REGULARIZARION = 0.095;
 
-    private static String [] EMF_FUNCS = {
+    public static long seed = 42L;
+
+    private static String[] EMF_FUNCS = {
             "* - cos cos log exp atan pu4 - atan -- qi3 exp -- atan log exp pu1 exp cos log cos log exp - exp cos pu2 exp -- atan log atan sin cos cos atan atan exp - log exp atan cos log exp atan pu4 pu2",
             "- + + exp sin qi3 exp + atan pu2 cos One pu1 * + pu1 sin + pu1 sin + + pu1 + + exp qi5 exp + * pu1 pu0 sin + + pu1 * + * * One One pu0 pu1 qi2 One + pu1 * + * * One One qi4 pu1 qi2 One qi2",
             "- - inv inv + inv inv + sin One cos Zero - inv inv + inv inv + sin atan -- + + * qi0 pu4 pu0 * qi0 pu4 cos Zero cos Zero + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * qi0 qi0 + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * cos Zero pu4 atan -- + + qi0 pu0 * inv + inv inv + sin One cos Zero cos Zero pu4",
@@ -81,11 +85,11 @@ public class BaselinesComparison {
 //            "exp atan + * atan + + atan + * atan + + qi5 atan + qi5 atan - inv pu8 * qi5 inv inv pu8 inv pu8 + qi5 atan - inv pu8 * qi5 inv inv pu8 inv pu8 atan + qi5 atan - inv pu8 * qi5 inv + qi5 atan qi5 inv pu8 + qi5 atan - inv pu8 * qi5 inv inv pu8 inv pu8"
 //    };
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         // define series
 
-        String [] series = new String [4 + EMF_FUNCS.length];
+        String[] series = new String[4 + EMF_FUNCS.length];
 
         series[0] = "PMF";
         series[1] = "BiasedMF";
@@ -98,12 +102,13 @@ public class BaselinesComparison {
 
         // define quality measures
 
-        double [] mae = new double [series.length];
-        double [] mse = new double [series.length];
+        double[] mae = new double[series.length];
+        double[] mse = new double[series.length];
 
         // load dataset
 
-        Kernel.getInstance().readKernel(BINARY_FILE);
+        DataModel datamodel = BenchmarkDataModels.MovieLens100K();
+        //DataModel datamodel = BenchmarkDataModels.FilmTrust();
 
 
         // test series
@@ -111,31 +116,31 @@ public class BaselinesComparison {
         for (int s = 0; s < series.length; s++) {
             String serie = series[s];
 
-            FactorizationModel fm;
+            Recommender recommender;
 
             if (serie.equals("PMF")) {
-                fm = new Pmf(PMF_NUM_TOPICS, NUM_ITERS, PMF_LAMBDA, PMF_GAMMA, false);
+                recommender = new PMF(datamodel, PMF_NUM_TOPICS, NUM_ITERS, PMF_LAMBDA, PMF_GAMMA, seed);
 
             } else if (serie.equals("BiasedMF")) {
-                fm = new Pmf(BIASED_MF_NUM_TOPICS, NUM_ITERS, BIASED_MF_LAMBDA, BIASED_MF_GAMMA, true);
+                recommender = new BiasedMF(datamodel, BIASED_MF_NUM_TOPICS, NUM_ITERS, BIASED_MF_LAMBDA, BIASED_MF_GAMMA, seed);
 
             } else if (serie.equals("NMF")) {
-                fm = new Nmf(NMF_NUM_TOPICS, NUM_ITERS);
+                recommender = new NMF(datamodel, NMF_NUM_TOPICS, NUM_ITERS, seed);
 
             } else if (serie.equals("BNMF")) {
-                fm = new Bmf(BNMF_NUM_TOPICS, NUM_ITERS, BNMF_ALPHA, BNMF_BETA);
+                recommender = new BNMF(datamodel, BNMF_NUM_TOPICS, NUM_ITERS, BNMF_ALPHA, BNMF_BETA, seed);
 
             } else { // serie.equals("EMF_<id>")
                 int index = Integer.parseInt(serie.split("_")[1]) - 1;
                 String func = EMF_FUNCS[index];
-                fm = new Emf(func, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE);
+                recommender = new EMF(datamodel, func, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE, seed);
             }
 
-            fm.train();
-            Processor.getInstance().testUsersProcess(new FactorizationPrediction(fm));
+            recommender.fit();
+            //Processor.getInstance().testUsersProcess(new FactorizationPrediction(fm));
 
-            mae[s] = QualityMeasures.MAE(fm);
-            mse[s] = QualityMeasures.MSE(fm);
+            mae[s] = new MAE(recommender).getScore();
+            mse[s] = new MSE(recommender).getScore();
 
 
             // print results

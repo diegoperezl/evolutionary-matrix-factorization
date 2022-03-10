@@ -1,14 +1,17 @@
-package main.java.experiments;
+package experiments;
 
-import cf4j.Kernel;
+
+import es.upm.etsisi.cf4j.data.BenchmarkDataModels;
+import es.upm.etsisi.cf4j.data.DataModel;
+
+import java.io.IOException;
 
 public class DatasetInfo {
 
-    private static final String BINARY_FILE = "datasets/ml100k.cf4j";
-//    private static final String BINARY_FILE = "datasets/filmtrust.cf4j";
+    public static void main(String[] args) throws IOException {
+        DataModel datamodel = BenchmarkDataModels.MovieLens100K();
+        //DataModel datamodel = BenchmarkDataModels.FilmTrust();
 
-    public static void main(String[] args) {
-        Kernel.getInstance().readKernel(BINARY_FILE);
-        System.out.println(Kernel.getInstance().getKernelInfo());
+        System.out.println(datamodel.toString());
     }
 }
