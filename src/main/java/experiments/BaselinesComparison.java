@@ -19,19 +19,19 @@ public class BaselinesComparison {
 
     //private static final String BINARY_FILE = "datasets/ml100k.cf4j";
 
-    private static int PMF_NUM_TOPICS = 6;
-    private static double PMF_LAMBDA = 0.085;
-    private static double PMF_GAMMA = 0.01;
+    private static int PMF_NUM_TOPICS = 4;
+    private static double PMF_LAMBDA = 0.1;
+    private static double PMF_GAMMA = 0.005;
 
-    private static int BIASED_MF_NUM_TOPICS = 6;
-    private static double BIASED_MF_LAMBDA = 0.06;
+    private static int BIASED_MF_NUM_TOPICS = 4;
+    private static double BIASED_MF_LAMBDA = 0.1;
     private static double BIASED_MF_GAMMA = 0.01;
 
-    private static int NMF_NUM_TOPICS = 6;
+    private static int NMF_NUM_TOPICS = 8;
 
-    private static int BNMF_NUM_TOPICS = 6;
-    private static double BNMF_ALPHA = 0.9;
-    private static int BNMF_BETA = 5;
+    private static int BNMF_NUM_TOPICS = 8;
+    private static double BNMF_ALPHA = 0.8;
+    private static int BNMF_BETA = 10;
 
     private static int EMF_NUM_TOPICS = 6;
     private static double EMF_LEARNING_RATE = 0.001;
@@ -40,16 +40,7 @@ public class BaselinesComparison {
     public static long seed = 42L;
 
     private static String[] EMF_FUNCS = {
-            "* - cos cos log exp atan pu4 - atan -- qi3 exp -- atan log exp pu1 exp cos log cos log exp - exp cos pu2 exp -- atan log atan sin cos cos atan atan exp - log exp atan cos log exp atan pu4 pu2",
-            "- + + exp sin qi3 exp + atan pu2 cos One pu1 * + pu1 sin + pu1 sin + + pu1 + + exp qi5 exp + * pu1 pu0 sin + + pu1 * + * * One One pu0 pu1 qi2 One + pu1 * + * * One One qi4 pu1 qi2 One qi2",
-            "- - inv inv + inv inv + sin One cos Zero - inv inv + inv inv + sin atan -- + + * qi0 pu4 pu0 * qi0 pu4 cos Zero cos Zero + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * qi0 qi0 + * inv inv qi3 pu4 -- sin atan + + qi0 pu0 * cos Zero pu4 atan -- + + qi0 pu0 * inv + inv inv + sin One cos Zero cos Zero pu4",
-            "-- + - - qi0 + + + One One * pu3 qi0 One + One pu2 * pu0 qi0",
-            "-- -- + + atan qi1 + + atan pu5 exp pu3 atan + -- - exp qi2 exp atan pu4 qi5 exp qi1",
-            "log exp + exp atan exp atan - exp atan - exp pu0 qi5 qi5 exp atan - pu3 qi5",
-            "* - -- -- cos -- -- pu1 atan inv -- qi3 exp cos * atan -- exp atan pu1 -- qi4",
-            "- + - qi4 pu2 inv * cos sin - qi4 pu2 atan exp qi2 - cos - qi4 pu4 cos cos * - - pu2 * qi4 One pu2 -- atan pu0",
-            "+ exp qi0 - exp atan pu0 + - Zero - exp qi0 qi5 + * pu5 qi5 - pu4 qi2",
-            "exp atan pow pow * exp exp pu5 inv exp qi0 exp pu4 exp inv exp pu5"
+            "exp -- atan -- + -- sin -- atan sin sin pow -- -- + atan inv log sin -- qi3 atan atan inv cos sin pu0 inv exp exp + -- -- + atan inv atan pu0 log inv sin pu0 -- inv pu5 exp pu0"
     };
 
 //    private static final String BINARY_FILE = "datasets/filmtrust.cf4j";
@@ -133,6 +124,12 @@ public class BaselinesComparison {
             } else { // serie.equals("EMF_<id>")
                 int index = Integer.parseInt(serie.split("_")[1]) - 1;
                 String func = EMF_FUNCS[index];
+
+                func = func
+                        .replace("(", " ")
+                        .replace(")", " ")
+                        .replace(",", " ");
+
                 recommender = new EMF(datamodel, func, EMF_NUM_TOPICS, NUM_ITERS, EMF_REGULARIZARION, EMF_LEARNING_RATE, seed);
             }
 
@@ -141,7 +138,7 @@ public class BaselinesComparison {
 
             mae[s] = new MAE(recommender).getScore();
             mse[s] = new MSE(recommender).getScore();
-
+        }
 
             // print results
 
@@ -150,5 +147,6 @@ public class BaselinesComparison {
                 System.out.println(series[i] + ";" + mae[i] + ";" + mse[i]);
             }
         }
-    }
+
+
 }

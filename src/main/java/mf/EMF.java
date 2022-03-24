@@ -91,9 +91,9 @@ public class EMF extends Recommender {
         }
     }
 
-    public void fit() {
+    public synchronized void fit() {
 
-        System.out.println("\nProcessing EMF...");
+        //System.out.println("\nFitting EMF...");
 
         // partial derivatives of the model function
 
@@ -143,18 +143,19 @@ public class EMF extends Recommender {
                 }
             }
 
-            if ((iter % 10) == 0) System.out.print(".");
-            if ((iter % 100) == 0) System.out.println(iter + " iterations");
+            //if ((iter % 10) == 0) System.out.print(".");
+            //if ((iter % 100) == 0) System.out.println(iter + " iterations");
         }
     }
 
-    public double predict(int userIndex, int itemIndex) {
+    public synchronized double predict(int userIndex, int itemIndex) {
+
         HashMap<String, Double> params = getParams(this.p[userIndex], this.q[itemIndex]);
         return sf.eval(params);
     }
 
     private double random(double min, double max) {
-        return Math.random() * (max - min) + min;
+        return this.rand.nextDouble() * (max - min) + min;
     }
 
     private double[] random(int size, double min, double max) {

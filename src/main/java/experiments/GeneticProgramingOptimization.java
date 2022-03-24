@@ -1,11 +1,8 @@
 package experiments;
 
-
 import es.upm.etsisi.cf4j.data.BenchmarkDataModels;
 import es.upm.etsisi.cf4j.data.DataModel;
-import es.upm.etsisi.cf4j.qualityMeasure.prediction.MAE;
 import es.upm.etsisi.cf4j.qualityMeasure.prediction.MSE;
-import es.upm.etsisi.cf4j.recommender.matrixFactorization.PMF;
 import es.upm.etsisi.cf4j.util.optimization.GridSearchCV;
 import es.upm.etsisi.cf4j.util.optimization.ParamsGrid;
 import io.jenetics.*;
@@ -13,12 +10,14 @@ import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.ext.SingleNodeCrossover;
+import io.jenetics.prngine.LCG64ShiftRandom;
 import io.jenetics.prog.ProgramChromosome;
 import io.jenetics.prog.ProgramGene;
 import io.jenetics.prog.op.Const;
 import io.jenetics.prog.op.Op;
 import io.jenetics.prog.op.Var;
 import io.jenetics.util.ISeq;
+import io.jenetics.util.RandomRegistry;
 import mf.EMF;
 import org.apache.commons.cli.*;
 
@@ -29,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class GeneticProgramingOptimization {
@@ -52,7 +52,6 @@ public class GeneticProgramingOptimization {
 
     private static int NUM_ITERS = 100;
 
-
     // Jenetics operations
     private final static Op<Double> sin = Op.of("sin", 1, v -> Math.sin(v[0]));
     private final static Op<Double> cos = Op.of("cos", 1, v -> Math.cos(v[0]));
@@ -66,7 +65,6 @@ public class GeneticProgramingOptimization {
     private final static Op<Double> times = Op.of("*", 2, v -> v[0] * v[1]);
     private final static Op<Double> pow = Op.of("pow", 2, v -> Math.pow(v[0], v[1]));
 
-
     // Jenetics terminals
     private final static Const<Double> zero = Const.of("Zero", 0.0);
     private final static Const<Double> one = Const.of("One", 1.0);
@@ -74,10 +72,11 @@ public class GeneticProgramingOptimization {
 
     private static DataModel datamodel;
 
-
     public static void main(String[] args) throws IOException {
         datamodel = BenchmarkDataModels.MovieLens100K();
         //datamodel = BenchmarkDataModels.FilmTrust();
+
+        RandomRegistry.setRandom(new LCG64ShiftRandom.ThreadSafe(1234));
 
         CommandLineParser parser = new DefaultParser();
         Options options = new Options();
@@ -214,6 +213,7 @@ public class GeneticProgramingOptimization {
 
         final Engine<ProgramGene<Double>, Double> engine = Engine
                 .builder(GeneticProgramingOptimization::fitness, codec)
+                .executor(Executors.newSingleThreadExecutor())
                 .minimizing()
                 .offspringSelector(new TournamentSelector<>())
                 .alterers(
@@ -232,6 +232,8 @@ public class GeneticProgramingOptimization {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
 
         final EvolutionResult<ProgramGene<Double>, Double> population = engine.stream()
                 .limit(GENS)
@@ -253,7 +255,7 @@ public class GeneticProgramingOptimization {
         System.out.println(population.getBestPhenotype().getGenotype().getGene().toParenthesesString());
     }
 
-    private static double fitness(final ProgramGene<Double> program) {
+    private static synchronized double fitness(final ProgramGene<Double> program) {
         String func = program.toParenthesesString()
                 .replace("(", " ")
                 .replace(")", " ")
@@ -261,21 +263,26 @@ public class GeneticProgramingOptimization {
 
         ParamsGrid paramsGrid = new ParamsGrid();
 
-        paramsGrid.addParam("func", new String[]{func});
-        paramsGrid.addParam("numIters", new int[]{NUM_ITERS});
-        paramsGrid.addParam("numFactors", new int[]{NUM_TOPICS});
-        paramsGrid.addParam("regularization", new double[]{REGULARIZATION});
-        paramsGrid.addParam("learningRate", new double[]{LEARNING_RATE});
+        paramsGrid.addFixedParam("func", func);
+        paramsGrid.addFixedParam("numIters", NUM_ITERS);
+        paramsGrid.addFixedParam("numFactors", NUM_TOPICS);
+        paramsGrid.addFixedParam("regularization", REGULARIZATION);
+        paramsGrid.addFixedParam("learningRate", LEARNING_RATE);
 
         paramsGrid.addFixedParam("seed", 42L);
 
         GridSearchCV gridSearchCV = new GridSearchCV(datamodel, paramsGrid, EMF.class, MSE.class, 5, 42L);
         gridSearchCV.fit();
 
-
-        double error = gridSearchCV.getBestScore();
+        double error;
+        try {
+            error = gridSearchCV.getBestScore();
+        }catch (Exception e){
+            error = Double.NaN;
+        }
 
         return Double.isNaN(error) ? 4.0 : error;
+
     }
 
     private static void update(final EvolutionResult<ProgramGene<Double>, Double> result) {
