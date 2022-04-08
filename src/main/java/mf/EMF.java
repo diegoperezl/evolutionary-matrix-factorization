@@ -91,7 +91,7 @@ public class EMF extends Recommender {
         }
     }
 
-    public synchronized void fit() {
+    public void fit() {
 
         //System.out.println("\nFitting EMF...");
 
@@ -148,7 +148,7 @@ public class EMF extends Recommender {
         }
     }
 
-    public synchronized double predict(int userIndex, int itemIndex) {
+    public double predict(int userIndex, int itemIndex) {
 
         HashMap<String, Double> params = getParams(this.p[userIndex], this.q[itemIndex]);
         return sf.eval(params);

@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
@@ -76,7 +77,7 @@ public class GeneticProgramingOptimization {
         datamodel = BenchmarkDataModels.MovieLens100K();
         //datamodel = BenchmarkDataModels.FilmTrust();
 
-        RandomRegistry.setRandom(new LCG64ShiftRandom.ThreadSafe(1234));
+        RandomRegistry.setRandom(new LCG64ShiftRandom.ThreadSafe(42L));
 
         CommandLineParser parser = new DefaultParser();
         Options options = new Options();
@@ -211,9 +212,11 @@ public class GeneticProgramingOptimization {
                 )), Genotype::getGene
         );
 
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
         final Engine<ProgramGene<Double>, Double> engine = Engine
                 .builder(GeneticProgramingOptimization::fitness, codec)
-                .executor(Executors.newSingleThreadExecutor())
+                .executor(executor)
                 .minimizing()
                 .offspringSelector(new TournamentSelector<>())
                 .alterers(
@@ -251,6 +254,7 @@ public class GeneticProgramingOptimization {
 //		}
 
         output.close();
+        executor.shutdown();
 
         System.out.println(population.getBestPhenotype().getGenotype().getGene().toParenthesesString());
     }

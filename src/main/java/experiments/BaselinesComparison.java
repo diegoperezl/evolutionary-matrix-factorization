@@ -40,7 +40,7 @@ public class BaselinesComparison {
     public static long seed = 42L;
 
     private static String[] EMF_FUNCS = {
-            "exp -- atan -- + -- sin -- atan sin sin pow -- -- + atan inv log sin -- qi3 atan atan inv cos sin pu0 inv exp exp + -- -- + atan inv atan pu0 log inv sin pu0 -- inv pu5 exp pu0"
+            "+(-(pu4,-(*(*(pu5,qi3),qi3),pu1)),qi3)"
     };
 
 //    private static final String BINARY_FILE = "datasets/filmtrust.cf4j";
